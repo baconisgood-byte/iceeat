@@ -1,0 +1,108 @@
+
+local Players = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
+local Debris = game:GetService("Debris")
+
+-- 🔫 GunTool
+if not ServerStorage:FindFirstChild("GunTool") then
+    local gun = Instance.new("Tool")
+    gun.Name = "GunTool"
+    gun.RequiresHandle = false
+    gun.CanBeDropped = true
+
+    gun.Activated:Connect(function()
+        local char = gun.Parent
+        local root = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        local rayOrigin = root.Position
+        local rayDirection = root.CFrame.LookVector * 50
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterDescendantsInstances = {char}
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+        local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+        if result and result.Instance then
+            local hum = result.Instance:FindFirstAncestorOfClass("Model"):FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum:TakeDamage(40)
+            end
+
+            -- hit effect
+            local part = Instance.new("Part")
+            part.Size = Vector3.new(0.2, 0.2, 0.2)
+            part.Position = result.Position
+            part.Anchored = true
+            part.BrickColor = BrickColor.new("Bright red")
+            part.Material = Enum.Material.Neon
+            part.CanCollide = false
+            part.Parent = workspace
+            Debris:AddItem(part, 0.3)
+        end
+    end)
+
+    gun.Parent = ServerStorage
+end
+
+-- ✨ HolyBlade
+if not ServerStorage:FindFirstChild("HolyBlade") then
+    local blade = Instance.new("Tool")
+    blade.Name = "HolyBlade"
+    blade.RequiresHandle = false
+    blade.CanBeDropped = true
+
+    blade.Activated:Connect(function()
+        local char = blade.Parent
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            for _, v in ipairs(workspace:GetDescendants()) do
+                if v:IsA("Humanoid") and v.Parent ~= char then
+                    local dist = (v.Parent:GetPrimaryPartCFrame().Position - char:GetPrimaryPartCFrame().Position).Magnitude
+                    if dist <= 10 then
+                        v:TakeDamage(35)
+                    end
+                end
+            end
+
+            -- Holy flash
+            local flash = Instance.new("Part")
+            flash.Shape = Enum.PartType.Ball
+            flash.Size = Vector3.new(6, 6, 6)
+            flash.Position = char:GetPrimaryPartCFrame().Position
+            flash.Anchored = true
+            flash.BrickColor = BrickColor.new("Institutional white")
+            flash.Material = Enum.Material.Neon
+            flash.CanCollide = false
+            flash.Transparency = 0.3
+            flash.Parent = workspace
+            Debris:AddItem(flash, 0.5)
+        end
+    end)
+
+    blade.Parent = ServerStorage
+end
+
+-- 🎁 Give both tools to all players
+local function giveTools(player)
+    local backpack = player:FindFirstChild("Backpack")
+    if not backpack then return end
+
+    for _, toolName in pairs({"GunTool", "HolyBlade"}) do
+        local tool = ServerStorage:FindFirstChild(toolName)
+        if tool and not backpack:FindFirstChild(toolName) then
+            tool:Clone().Parent = backpack
+        end
+    end
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+    giveTools(p)
+end
+
+Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function()
+        wait(1)
+        giveTools(p)
+    end)
+end)
+]])()
