@@ -1,0 +1,81 @@
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+
+-- Toggle state
+local enabled = false
+local flyActive = false
+local flySpeed = 50
+local bodyGyro, bodyVelocity
+
+-- Infinite Jump function
+local function setupInfiniteJump()
+    UserInputService.JumpRequest:Connect(function()
+        if enabled then
+            local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum:ChangeState("Jumping")
+            end
+        end
+    end)
+end
+
+-- Fly toggle
+local function toggleFly()
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+    flyActive = not flyActive
+    if flyActive then
+        bodyGyro = Instance.new("BodyGyro", player.Character.HumanoidRootPart)
+        bodyVelocity = Instance.new("BodyVelocity", player.Character.HumanoidRootPart)
+        bodyGyro.P = 9e4
+        bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        RunService.RenderStepped:Connect(function()
+            if flyActive then
+                local camCF = workspace.CurrentCamera.CFrame
+                bodyGyro.CFrame = camCF
+                local moveDir = Vector3.zero
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += camCF.RightVector end
+                bodyVelocity.Velocity = moveDir * flySpeed
+            end
+        end)
+    else
+        if bodyGyro then bodyGyro:Destroy() end
+        if bodyVelocity then bodyVelocity:Destroy() end
+    end
+end
+
+-- Hit Aura
+local function setupHitAura()
+    RunService.Heartbeat:Connect(function()
+        if enabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            for _, target in pairs(Players:GetPlayers()) do
+                if target ~= player and target.Character and target.Character:FindFirstChild("Humanoid") and target.Character:FindFirstChild("HumanoidRootPart") then
+                    if (target.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude <= 10 then
+                        target.Character.Humanoid:TakeDamage(10)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- Main toggle
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.I then
+        enabled = not enabled
+        if enabled then
+            toggleFly()
+        else
+            toggleFly() -- stops flying when disabled
+        end
+    end
+end)
+
+-- Setup
+setupInfiniteJump()
+setupHitAura()
